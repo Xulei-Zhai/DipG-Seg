@@ -1,4 +1,12 @@
 /*
+ * @version: V1.0
+ * @Author: [ZhaiXulei]
+ * @Date: 2024-03-06 21:26:17
+ * @LastEditors: [ZhaiXulei]
+ * @LastEditTime: 2024-03-07 00:12:10
+ * @Descripttion: :
+ */
+/*
  * Copyright (c) 2023, Hao Wen, Chunhua Liu
  *
  This file is the implementation of our paper: DipG-Seg: Fast and Accurate Double Image-Based Pixel-Wise Ground Segmentation
@@ -136,6 +144,8 @@ Dipgseg::Dipgseg(double upper_z_std_thr, double lower_z_std_thr,
 Dipgseg::~Dipgseg(){
 }
 
+// 内联函数的作用是在编译时将函数体直接嵌入到调用处，以减少函数调用的开销。由于这个函数只有一行代码，
+// 所以使用内联函数可以有效地提高程序的执行效率。
 inline int32_t Dipgseg::find_row_index(float angle){
     int32_t found = static_cast<int32_t>((unprj_row_angles_const[0] - angle)*reverse_step_row_angle);
     if(found > first_index){
@@ -184,7 +194,8 @@ void Dipgseg::segment_ground_eval(pcl::PointCloud<PointType>& cloud_in,
     
     // start projection
     for(size_t index=0; index<cloud_in.size(); ++index){
-        const auto& point = cloud_in.points[index];
+        const auto& point = cloud_in.points[index];  // 这个代码是不是很细节，相当于没有重新开辟内存来复制点云的值?
+        // 对于到坐标轴原点的距离小于4米内的点，根据x,y的前后左右边界来进一步过滤
         float dist = sqrt(point.x*point.x + point.y*point.y + point.z*point.z);
         if(dist < 4.0f){
             if(std::fabs(point.y) < close_region_boundary_y and point.x < close_region_boundary_x_pos and point.x > close_region_boundary_x_neg){
@@ -196,15 +207,15 @@ void Dipgseg::segment_ground_eval(pcl::PointCloud<PointType>& cloud_in,
         int32_t row_index = find_row_index(row_angle);
         int32_t col_index = find_col_index(col_angle);
 
-        unprj_maxtix[row_index][col_index].emplace_back(index);
+        unprj_maxtix[row_index][col_index].emplace_back(index);  // 更新unprj_maxtix的每个像素处的索引队列
 
         auto& current_z = img_z.at<float>(row_index, col_index);
         
         if(current_z!=0.000121f) continue;
 
         auto& current_d = img_d.at<float>(row_index, col_index);
-        current_d = std::sqrt(point.x*point.x + point.y*point.y);
-        current_z =  point.z+sensor_height; 
+        current_d = std::sqrt(point.x*point.x + point.y*point.y); // 更新img_d的每个像素值
+        current_z =  point.z+sensor_height;  // 更新img_z的每一个像素值
     }
 
     // first-level repair
